@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>LM Architettura Gestionale</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- jsPDF per esportare in PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("service-worker.js");
+      });
+    }
+  </script>
+
+  <style>
+    :root {
+      --bg: #f4f5f7;
+      --card: #ffffff;
+      --accent: #2563eb;
+      --accent-soft: #e0ecff;
+      --danger: #dc2626;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      background: #0f172a;
+      color: white;
+      padding: 16px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    header p {
+      margin: 2px 0 0;
+      font-size: 13px;
+      color: #cbd5f5;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      background: rgba(37, 99, 235, 0.18);
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(191, 219, 254, 0.5);
+      color: #dbeafe;
+    }
+
+    .container {
+      padding: 16px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    button, select, input[type="text"], input[type="date"], textarea {
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      padding: 8px 14px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-light {
+      background: white;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding-inline: 4px;
+    }
+
+    .toolbar input[type="text"] {
+      padding: 7px 10px;
+      min-width: 190px;
+    }
+
+    .toolbar select {
+      padding: 7px 10px;
+      background: white;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 12px 14px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+      min-height: 120px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      gap: 8px;
+    }
+
+    .card-header h2 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card-header small {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    thead {
+      background: #f9fafb;
+    }
+
+    thead th {
+      padding: 8px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      cursor: pointer;
+      transition: background 0.12s ease;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #f9fafb;
+    }
+
+    tbody tr:hover {
+      background: #e5f0ff;
+    }
+
+    tbody td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      gap: 4px;
+    }
+
+    .pill-status-open {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .pill-status-progress {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .pill-status-done {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .pill-priority-high {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .pill-priority-medium {
+      background: #e0ecff;
+      color: #1d4ed8;
+    }
+
+    .pill-priority-low {
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: currentColor;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .form-grid-1 {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .field label {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .field input[type="text"],
+    .field input[type="date"],
+    .field select,
+    .field textarea {
+      padding: 7px 9px;
+      font-size: 12px;
+      background: white;
+    }
+
+    .field textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      margin: 6px 0;
+    }
+
+    .small-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      margin-top: 4px;
+    }
+
+    .small-table th,
+    .small-table td {
+      border-bottom: 1px solid #f1f5f9;
+      padding: 4px 4px;
+      text-align: left;
+    }
+
+    .small-table th {
+      background: #f9fafb;
+      color: var(--muted);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .tag-type {
+      background: #eef2ff;
+      color: #4338ca;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 11px;
+    }
+
+    .footer-note {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LM Architettura Gestionale</h1>
+    <p>Gestione aziende, tecnici e attività (POS, PIMUS, DVR, corsi 81/08, pratiche)</p>
+  </div>
+  <div class="badge">
+    Applicazione web sviluppata da Ing. Luigi Pio D’Angelo
+  </div>
+</header>
+
+<div class="container">
+  <div class="toolbar">
+    <input type="text" id="searchInput" placeholder="Cerca in attività / aziende..." />
+    <select id="filterCompany">
+      <option value="">Tutte le aziende</option>
+    </select>
+    <select id="filterTechnician">
+      <option value="">Tutti i tecnici</option>
+    </select>
+    <select id="filterType">
+      <option value="">Tutti i tipi</option>
+      <option>POS</option>
+      <option>PIMUS</option>
+      <option>DVR</option>
+      <option>Pratica</option>
+      <option>Corso 81/08</option>
+      <option>Altro</option>
+    </select>
+    <select id="filterStatus">
+      <option value="">Tutti gli stati</option>
+      <option value="Da fare">Da fare</option>
+      <option value="In corso">In corso</option>
+      <option value="Completato">Completato</option>
+    </select>
+
+    <button class="btn-primary" id="btnNewActivity">+ Nuova attività</button>
+    <button class="btn-light" id="btnExportPDF">⬇ Elenco PDF</button>
+    <button class="btn-light" id="btnExportTechPDF">👤 Report tecnico PDF</button>
+  </div>
+
+  <div class="layout">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h2>Attività / Lavori</h2>
+          <small>Clicca una riga per modificare i dettagli</small>
+        </div>
+        <div class="muted" id="statsInfo"></div>
+      </div>
+      <div style="max-height: 60vh; overflow: auto;">
+        <table>
+          <thead>
+          <tr>
+            <th>Attività</th>
+            <th>Azienda</th>
+            <th>Tipo</th>
+            <th>Tecnico</th>
+            <th>Scadenza</th>
+            <th>Stato</th>
+            <th>Priorità</th>
+          </tr>
+          </thead>
+          <tbody id="activitiesTableBody"></tbody>
+        </table>
+      </div>
+      <div class="footer-note">
+        Per ogni lavoro puoi indicare: azienda, tipo (POS, PIMUS, DVR, pratica, corso 81/08, ecc.), tecnico, scadenza, stato e priorità.
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>Scheda attività</h2>
+            <small id="activityFormTitle">Nuova attività</small>
+          </div>
+          <button class="btn-ghost" id="btnResetActivity">↺ Pulisci</button>
+        </div>
+
+        <form id="activityForm">
+          <input type="hidden" id="activityId">
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="activityName">Titolo attività *</label>
+              <input type="text" id="activityName" placeholder="Es. POS cantiere Via Roma, DVR azienda X..." required>
+            </div>
+            <div class="field">
+              <label for="activityCompany">Azienda *</label>
+              <select id="activityCompany" required>
+                <option value="">Seleziona azienda...</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="activityType">Tipo lavoro *</label>
+              <select id="activityType" required>
+                <option value="">Seleziona...</option>
+                <option>POS</option>
+                <option>PIMUS</option>
+                <option>DVR</option>
+                <option>Pratica</option>
+                <option>Corso 81/08</option>
+                <option>Altro</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="activityTechnician">Tecnico assegnato *</label>
+              <select id="activityTechnician" required></select>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="activityDueDate">Scadenza</label>
+              <input type="date" id="activityDueDate">
+            </div>
+            <div class="field">
+              <label for="activityStatus">Stato</label>
+              <select id="activityStatus">
+                <option>Da fare</option>
+                <option>In corso</option>
+                <option>Completato</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="activityPriority">Priorità</label>
+              <select id="activityPriority">
+                <option>Media</option>
+                <option>Alta</option>
+                <option>Bassa</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="activityChecklist">Checklist 81/08 (rapida)</label>
+              <select id="activityChecklist">
+                <option value="">Nessuna selezione rapida</option>
+                <option value="POS, DVR, Nomina RSPP, Verbale sopralluogo">POS + DVR + RSPP + Verbale sopralluogo</option>
+                <option value="PIMUS, POS, Piano montaggio, Formazione addetti ponteggi">PIMUS + POS + formazione ponteggi</option>
+                <option value="DVR, DUVRI, Nomine interne, Registro formazione">DVR + DUVRI + nomine + formazione</option>
+                <option value="Analisi fabbisogni formativi, Corsi 81/08 base, Aggiornamenti, Verbali">Pacchetto corsi 81/08</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid-1">
+            <div class="field">
+              <label for="activityNotes">Note / Dettagli attività</label>
+              <textarea id="activityNotes" placeholder="Es. PSC richiesto dalla SA, integrazione documenti, numero lavoratori, scadenze aggiornamenti corsi..."></textarea>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; gap:8px; margin-top:4px;">
+            <button type="submit" class="btn-primary" style="flex:1;">💾 Salva attività</button>
+            <button type="button" id="btnDeleteActivity" class="btn-danger" style="flex:0.7;">🗑 Elimina</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>Aziende</h2>
+            <small>Anagrafica aziende collegate alle attività</small>
+          </div>
+          <button class="btn-ghost" id="btnResetCompany">↺ Pulisci</button>
+        </div>
+
+        <form id="companyForm">
+          <input type="hidden" id="companyId">
+          <div class="form-grid">
+            <div class="field">
+              <label for="companyName">Ragione sociale *</label>
+              <input type="text" id="companyName" required placeholder="Es. Rossi Impianti S.r.l.">
+            </div>
+            <div class="field">
+              <label for="companyVat">P.IVA / CF</label>
+              <input type="text" id="companyVat" placeholder="Es. 01234567890">
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="companyContact">Referente</label>
+              <input type="text" id="companyContact" placeholder="Es. Geom. Bianchi">
+            </div>
+            <div class="field">
+              <label for="companyPhone">Telefono / Email</label>
+              <input type="text" id="companyPhone" placeholder="Es. 333..., email...">
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="companyWorkers">N. lavoratori</label>
+              <input type="text" id="companyWorkers" placeholder="Es. 12">
+            </div>
+            <div class="field">
+              <label for="companyRisk">Livello rischio</label>
+              <select id="companyRisk">
+                <option value="">Non definito</option>
+                <option>Basso</option>
+                <option>Medio</option>
+                <option>Alto</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="companyNextCourse">Prossima scadenza corsi 81/08</label>
+              <input type="date" id="companyNextCourse">
+            </div>
+            <div class="field"></div>
+          </div>
+
+          <div class="form-grid-1">
+            <div class="field">
+              <label for="companyNotes">Note azienda / corsi</label>
+              <textarea id="companyNotes" placeholder="Es. principali rischi, DVR in scadenza, corsi base/preposti/RLS da fare, ecc."></textarea>
+            </div>
+          </div>
+          <div style="display:flex; justify-content:space-between; gap:8px; margin-top:4px;">
+            <button type="submit" class="btn-light" style="flex:1;">💾 Salva azienda</button>
+            <button type="button" id="btnDeleteCompany" class="btn-danger" style="flex:0.7;">🗑 Elimina</button>
+          </div>
+        </form>
+
+        <div class="section-title">Elenco aziende</div>
+        <div style="max-height:150px; overflow:auto;">
+          <table class="small-table">
+            <thead>
+            <tr>
+              <th>Ragione sociale</th>
+              <th>Rischio</th>
+              <th>N. lav.</th>
+              <th>Scadenza corsi</th>
+            </tr>
+            </thead>
+            <tbody id="companiesTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>Tecnici</h2>
+            <small>Gestione dei tecnici a cui assegnare le attività</small>
+          </div>
+        </div>
+
+        <form id="technicianForm">
+          <div class="form-grid">
+            <div class="field">
+              <label for="technicianName">Nome tecnico</label>
+              <input type="text" id="technicianName" placeholder="Es. Ing. Mario Rossi">
+            </div>
+            <div class="field">
+              <label>&nbsp;</label>
+              <button type="submit" class="btn-light" style="width:100%;">+ Aggiungi / aggiorna</button>
+            </div>
+          </div>
+        </form>
+
+        <div style="max-height:120px; overflow:auto;">
+          <table class="small-table">
+            <thead>
+            <tr>
+              <th>Tecnico</th>
+              <th>Azioni</th>
+            </tr>
+            </thead>
+            <tbody id="techniciansTableBody"></tbody>
+          </table>
+        </div>
+        <div class="footer-note">
+          Preimpostati 3 tecnici; puoi rinominarli o aggiungerne altri. Le attività saranno collegate a questi tecnici.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let companies = [];
+  let technicians = [];
+  let activities = [];
+
+  const STORAGE_KEY = "lmarchitettura_data_v1";
+
+  function loadData() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        companies = parsed.companies || [];
+        technicians = parsed.technicians || [];
+        activities = parsed.activities || [];
+      } catch (e) {
+        companies = [];
+        technicians = [];
+        activities = [];
+      }
+    }
+
+    if (technicians.length === 0) {
+      technicians = [
+        { id: generateId(), name: "Tecnico 1" },
+        { id: generateId(), name: "Tecnico 2" },
+        { id: generateId(), name: "Tecnico 3" }
+      ];
+    }
+  }
+
+  function saveData() {
+    const data = { companies, technicians, activities };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  function generateId() {
+    return "id_" + Math.random().toString(36).substr(2, 9);
+  }
+
+  function renderCompanies() {
+    const tbody = document.getElementById("companiesTableBody");
+    tbody.innerHTML = "";
+    companies.forEach(c => {
+      const tr = document.createElement("tr");
+      tr.dataset.id = c.id;
+      tr.innerHTML = `
+        <td>${escapeHtml(c.name || "")}</td>
+        <td>${escapeHtml(c.risk || "")}</td>
+        <td>${escapeHtml(c.workers || "")}</td>
+        <td>${escapeHtml(c.nextCourse || "")}</td>
+      `;
+      tr.addEventListener("click", () => loadCompanyToForm(c.id));
+      tbody.appendChild(tr);
+    });
+
+    const selectCompanyFilter = document.getElementById("filterCompany");
+    const selectCompanyActivity = document.getElementById("activityCompany");
+
+    const currentFilter = selectCompanyFilter.value;
+    const currentActivityVal = selectCompanyActivity.value;
+
+    selectCompanyFilter.innerHTML = `<option value="">Tutte le aziende</option>`;
+    selectCompanyActivity.innerHTML = `<option value="">Seleziona azienda...</option>`;
+
+    companies.forEach(c => {
+      const opt1 = document.createElement("option");
+      opt1.value = c.id;
+      opt1.textContent = c.name;
+      selectCompanyFilter.appendChild(opt1);
+
+      const opt2 = document.createElement("option");
+      opt2.value = c.id;
+      opt2.textContent = c.name;
+      selectCompanyActivity.appendChild(opt2);
+    });
+
+    if (currentFilter) selectCompanyFilter.value = currentFilter;
+    if (currentActivityVal) selectCompanyActivity.value = currentActivityVal;
+  }
+
+  function renderTechnicians() {
+    const tbody = document.getElementById("techniciansTableBody");
+    tbody.innerHTML = "";
+    technicians.forEach(t => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(t.name)}</td>
+        <td>
+          <button class="btn-ghost" type="button">Seleziona</button>
+          <button class="btn-ghost" type="button">🗑</button>
+        </td>
+      `;
+      const [btnSelect, btnDelete] = tr.querySelectorAll("button");
+      btnSelect.addEventListener("click", () => {
+        document.getElementById("technicianName").value = t.name;
+        document.getElementById("technicianForm").dataset.editId = t.id;
+      });
+      btnDelete.addEventListener("click", () => {
+        if (!confirm("Eliminare questo tecnico? Verrà rimosso dai nuovi inserimenti (le attività esistenti manterranno il nome come testo).")) return;
+        technicians = technicians.filter(x => x.id !== t.id);
+        saveData();
+        renderTechnicians();
+        renderTechnicianSelects();
+      });
+
+      tbody.appendChild(tr);
+    });
+
+    renderTechnicianSelects();
+  }
+
+  function renderTechnicianSelects() {
+    const selectFilter = document.getElementById("filterTechnician");
+    const selectActivity = document.getElementById("activityTechnician");
+
+    const currentFilter = selectFilter.value;
+    const currentActivityVal = selectActivity.value;
+
+    selectFilter.innerHTML = `<option value="">Tutti i tecnici</option>`;
+    selectActivity.innerHTML = `<option value="">Seleziona tecnico...</option>`;
+
+    technicians.forEach(t => {
+      const opt1 = document.createElement("option");
+      opt1.value = t.id;
+      opt1.textContent = t.name;
+      selectFilter.appendChild(opt1);
+
+      const opt2 = document.createElement("option");
+      opt2.value = t.id;
+      opt2.textContent = t.name;
+      selectActivity.appendChild(opt2);
+    });
+
+    if (currentFilter) selectFilter.value = currentFilter;
+    if (currentActivityVal) selectActivity.value = currentActivityVal;
+  }
+
+  function renderActivities() {
+    const tbody = document.getElementById("activitiesTableBody");
+    tbody.innerHTML = "";
+
+    const search = document.getElementById("searchInput").value.toLowerCase();
+    const fCompany = document.getElementById("filterCompany").value;
+    const fTech = document.getElementById("filterTechnician").value;
+    const fType = document.getElementById("filterType").value;
+    const fStatus = document.getElementById("filterStatus").value;
+
+    let filtered = activities.slice();
+
+    filtered = filtered.filter(a => {
+      if (fCompany && a.companyId !== fCompany) return false;
+      if (fTech && a.technicianId !== fTech) return false;
+      if (fType && a.type !== fType) return false;
+      if (fStatus && a.status !== fStatus) return false;
+      if (search) {
+        const company = companies.find(c => c.id === a.companyId);
+        const tech = technicians.find(t => t.id === a.technicianId);
+        const text = (
+          (a.name || "") + " " +
+          (a.type || "") + " " +
+          (a.status || "") + " " +
+          (company ? company.name : "") + " " +
+          (tech ? tech.name : "") +
+          " " + (a.notes || "")
+        ).toLowerCase();
+        if (!text.includes(search)) return false;
+      }
+      return true;
+    });
+
+    filtered.forEach(a => {
+      const tr = document.createElement("tr");
+      tr.dataset.id = a.id;
+      const company = companies.find(c => c.id === a.companyId);
+      const tech = technicians.find(t => t.id === a.technicianId);
+
+      tr.innerHTML = `
+        <td>${escapeHtml(a.name || "")}</td>
+        <td>${escapeHtml(company ? company.name : "")}</td>
+        <td><span class="tag-type">${escapeHtml(a.type || "")}</span></td>
+        <td>${escapeHtml(tech ? tech.name : "")}</td>
+        <td>${escapeHtml(a.dueDate || "")}</td>
+        <td>${renderStatusPill(a.status)}</td>
+        <td>${renderPriorityPill(a.priority)}</td>
+      `;
+      tr.addEventListener("click", () => loadActivityToForm(a.id));
+      tbody.appendChild(tr);
+    });
+
+    const statsEl = document.getElementById("statsInfo");
+    statsEl.textContent = `${filtered.length} attività mostrate / ${activities.length} totali`;
+  }
+
+  function renderStatusPill(status) {
+    let cls = "pill-status-open";
+    if (status === "In corso") cls = "pill-status-progress";
+    if (status === "Completato") cls = "pill-status-done";
+    return `
+      <span class="pill ${cls}">
+        <span class="status-dot"></span>
+        ${escapeHtml(status || "")}
+      </span>
+    `;
+  }
+
+  function renderPriorityPill(priority) {
+    let cls = "pill-priority-medium";
+    if (priority === "Alta") cls = "pill-priority-high";
+    if (priority === "Bassa") cls = "pill-priority-low";
+    return `<span class="pill ${cls}">${escapeHtml(priority || "")}</span>`;
+  }
+
+  function resetActivityForm() {
+    document.getElementById("activityId").value = "";
+    document.getElementById("activityName").value = "";
+    document.getElementById("activityCompany").value = "";
+    document.getElementById("activityType").value = "";
+    document.getElementById("activityTechnician").value = "";
+    document.getElementById("activityDueDate").value = "";
+    document.getElementById("activityStatus").value = "Da fare";
+    document.getElementById("activityPriority").value = "Media";
+    document.getElementById("activityNotes").value = "";
+    document.getElementById("activityChecklist").value = "";
+    document.getElementById("activityFormTitle").textContent = "Nuova attività";
+  }
+
+  function loadActivityToForm(id) {
+    const a = activities.find(x => x.id === id);
+    if (!a) return;
+    document.getElementById("activityId").value = a.id;
+    document.getElementById("activityName").value = a.name || "";
+    document.getElementById("activityCompany").value = a.companyId || "";
+    document.getElementById("activityType").value = a.type || "";
+    document.getElementById("activityTechnician").value = a.technicianId || "";
+    document.getElementById("activityDueDate").value = a.dueDate || "";
+    document.getElementById("activityStatus").value = a.status || "Da fare";
+    document.getElementById("activityPriority").value = a.priority || "Media";
+    document.getElementById("activityNotes").value = a.notes || "";
+    document.getElementById("activityChecklist").value = "";
+    document.getElementById("activityFormTitle").textContent = "Modifica attività";
+  }
+
+  function resetCompanyForm() {
+    document.getElementById("companyId").value = "";
+    document.getElementById("companyName").value = "";
+    document.getElementById("companyVat").value = "";
+    document.getElementById("companyContact").value = "";
+    document.getElementById("companyPhone").value = "";
+    document.getElementById("companyWorkers").value = "";
+    document.getElementById("companyRisk").value = "";
+    document.getElementById("companyNextCourse").value = "";
+    document.getElementById("companyNotes").value = "";
+  }
+
+  function loadCompanyToForm(id) {
+    const c = companies.find(x => x.id === id);
+    if (!c) return;
+    document.getElementById("companyId").value = c.id;
+    document.getElementById("companyName").value = c.name || "";
+    document.getElementById("companyVat").value = c.vat || "";
+    document.getElementById("companyContact").value = c.contact || "";
+    document.getElementById("companyPhone").value = c.phone || "";
+    document.getElementById("companyWorkers").value = c.workers || "";
+    document.getElementById("companyRisk").value = c.risk || "";
+    document.getElementById("companyNextCourse").value = c.nextCourse || "";
+    document.getElementById("companyNotes").value = c.notes || "";
+  }
+
+  function escapeHtml(str) {
+    if (!str) return "";
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function getFilteredActivities() {
+    const search = document.getElementById("searchInput").value.toLowerCase();
+    const fCompany = document.getElementById("filterCompany").value;
+    const fTech = document.getElementById("filterTechnician").value;
+    const fType = document.getElementById("filterType").value;
+    const fStatus = document.getElementById("filterStatus").value;
+
+    let filtered = activities.slice();
+    filtered = filtered.filter(a => {
+      if (fCompany && a.companyId !== fCompany) return false;
+      if (fTech && a.technicianId !== fTech) return false;
+      if (fType && a.type !== fType) return false;
+      if (fStatus && a.status !== fStatus) return false;
+      if (search) {
+        const company = companies.find(c => c.id === a.companyId);
+        const tech = technicians.find(t => t.id === a.technicianId);
+        const text = (
+          (a.name || "") + " " +
+          (a.type || "") + " " +
+          (a.status || "") + " " +
+          (company ? company.name : "") + " " +
+          (tech ? tech.name : "") +
+          " " + (a.notes || "")
+        ).toLowerCase();
+        if (!text.includes(search)) return false;
+      }
+      return true;
+    });
+    return filtered;
+  }
+
+  function exportActivitiesToPDF(filtered, titleSuffix) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    let y = 40;
+
+    doc.setFontSize(14);
+    const title = "Elenco attività - LM Architettura Gestionale" + (titleSuffix ? " - " + titleSuffix : "");
+    doc.text(title, 40, y);
+    y += 20;
+
+    doc.setFontSize(10);
+    filtered.forEach(a => {
+      const company = companies.find(c => c.id === a.companyId);
+      const tech = technicians.find(t => t.id === a.technicianId);
+
+      const lines = [
+        `Attività: ${a.name || ""}`,
+        `Azienda: ${company ? company.name : ""}`,
+        `Tipo: ${a.type || ""} | Tecnico: ${tech ? tech.name : ""}`,
+        `Scadenza: ${a.dueDate || ""} | Stato: ${a.status || ""} | Priorità: ${a.priority || ""}`,
+        a.notes ? `Note: ${a.notes}` : ""
+      ].filter(Boolean);
+
+      lines.forEach(line => {
+        const split = doc.splitTextToSize(line, 520);
+        split.forEach(part => {
+          if (y > 780) {
+            doc.addPage();
+            y = 40;
+          }
+          doc.text(part, 40, y);
+          y += 14;
+        });
+      });
+
+      y += 8;
+    });
+
+    if (filtered.length === 0) {
+      doc.text("Nessuna attività trovata con i filtri impostati.", 40, y);
+    }
+
+    const filename = titleSuffix
+      ? "lmarchitettura_attivita_" + titleSuffix.replace(/\s+/g, "_") + ".pdf"
+      : "lmarchitettura_attivita.pdf";
+    doc.save(filename);
+  }
+
+  function exportCurrentFiltersPDF() {
+    const filtered = getFilteredActivities();
+    exportActivitiesToPDF(filtered, "");
+  }
+
+  function exportTechnicianPDF() {
+    const fTech = document.getElementById("filterTechnician").value;
+    if (!fTech) {
+      alert("Seleziona prima un tecnico nel filtro 'Tutti i tecnici' per generare il report.");
+      return;
+    }
+    const tech = technicians.find(t => t.id === fTech);
+    const filtered = getFilteredActivities().filter(a => a.technicianId === fTech);
+    const suffix = tech ? tech.name : "Tecnico";
+    exportActivitiesToPDF(filtered, suffix);
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    loadData();
+    renderCompanies();
+    renderTechnicians();
+    renderActivities();
+
+    document.getElementById("activityForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const id = document.getElementById("activityId").value || generateId();
+      const name = document.getElementById("activityName").value.trim();
+      const companyId = document.getElementById("activityCompany").value;
+      const type = document.getElementById("activityType").value;
+      const technicianId = document.getElementById("activityTechnician").value;
+      const dueDate = document.getElementById("activityDueDate").value;
+      const status = document.getElementById("activityStatus").value;
+      const priority = document.getElementById("activityPriority").value;
+      let notes = document.getElementById("activityNotes").value;
+      const checklistQuick = document.getElementById("activityChecklist").value;
+
+      if (!name || !companyId || !type || !technicianId) {
+        alert("Compila almeno Titolo, Azienda, Tipo lavoro e Tecnico.");
+        return;
+      }
+
+      if (checklistQuick) {
+        if (notes) notes += "\n\nChecklist 81/08: " + checklistQuick;
+        else notes = "Checklist 81/08: " + checklistQuick;
+      }
+
+      const existingIndex = activities.findIndex(a => a.id === id);
+      const obj = { id, name, companyId, type, technicianId, dueDate, status, priority, notes };
+
+      if (existingIndex >= 0) {
+        activities[existingIndex] = obj;
+      } else {
+        activities.push(obj);
+      }
+
+      saveData();
+      renderActivities();
+      loadActivityToForm(id);
+      document.getElementById("activityChecklist").value = "";
+    });
+
+    document.getElementById("btnResetActivity").addEventListener("click", () => {
+      resetActivityForm();
+    });
+
+    document.getElementById("btnNewActivity").addEventListener("click", () => {
+      resetActivityForm();
+    });
+
+    document.getElementById("btnDeleteActivity").addEventListener("click", () => {
+      const id = document.getElementById("activityId").value;
+      if (!id) {
+        alert("Nessuna attività selezionata.");
+        return;
+      }
+      if (!confirm("Sei sicuro di voler eliminare questa attività?")) return;
+      activities = activities.filter(a => a.id !== id);
+      saveData();
+      renderActivities();
+      resetActivityForm();
+    });
+
+    document.getElementById("companyForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const id = document.getElementById("companyId").value || generateId();
+      const name = document.getElementById("companyName").value.trim();
+      const vat = document.getElementById("companyVat").value.trim();
+      const contact = document.getElementById("companyContact").value.trim();
+      const phone = document.getElementById("companyPhone").value.trim();
+      const workers = document.getElementById("companyWorkers").value.trim();
+      const risk = document.getElementById("companyRisk").value;
+      const nextCourse = document.getElementById("companyNextCourse").value;
+      const notes = document.getElementById("companyNotes").value;
+
+      if (!name) {
+        alert("Inserisci almeno la ragione sociale.");
+        return;
+      }
+
+      const existingIndex = companies.findIndex(c => c.id === id);
+      const obj = { id, name, vat, contact, phone, workers, risk, nextCourse, notes };
+
+      if (existingIndex >= 0) {
+        companies[existingIndex] = obj;
+      } else {
+        companies.push(obj);
+      }
+
+      saveData();
+      renderCompanies();
+      loadCompanyToForm(id);
+    });
+
+    document.getElementById("btnResetCompany").addEventListener("click", () => {
+      resetCompanyForm();
+    });
+
+    document.getElementById("btnDeleteCompany").addEventListener("click", () => {
+      const id = document.getElementById("companyId").value;
+      if (!id) {
+        alert("Nessuna azienda selezionata.");
+        return;
+      }
+      const hasActivities = activities.some(a => a.companyId === id);
+      if (hasActivities) {
+        if (!confirm("Questa azienda ha attività collegate. Eliminandola, le attività resteranno ma senza azienda. Procedere?")) return;
+      } else {
+        if (!confirm("Eliminare questa azienda?")) return;
+      }
+      companies = companies.filter(c => c.id !== id);
+      activities = activities.map(a => a.companyId === id ? { ...a, companyId: "" } : a);
+      saveData();
+      renderCompanies();
+      renderActivities();
+      resetCompanyForm();
+    });
+
+    document.getElementById("technicianForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = document.getElementById("technicianName").value.trim();
+      if (!name) return;
+      const editId = document.getElementById("technicianForm").dataset.editId;
+      if (editId) {
+        const idx = technicians.findIndex(t => t.id === editId);
+        if (idx >= 0) technicians[idx].name = name;
+        delete document.getElementById("technicianForm").dataset.editId;
+      } else {
+        technicians.push({ id: generateId(), name });
+      }
+      document.getElementById("technicianName").value = "";
+      saveData();
+      renderTechnicians();
+    });
+
+    ["searchInput", "filterCompany", "filterTechnician", "filterType", "filterStatus"].forEach(id => {
+      document.getElementById(id).addEventListener("input", renderActivities);
+      document.getElementById(id).addEventListener("change", renderActivities);
+    });
+
+    document.getElementById("btnExportPDF").addEventListener("click", exportCurrentFiltersPDF);
+    document.getElementById("btnExportTechPDF").addEventListener("click", exportTechnicianPDF);
+  });
+</script>
+
+</body>
+</html>
